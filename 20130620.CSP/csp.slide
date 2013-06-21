@@ -1,0 +1,76 @@
+Communicating Sequential Processes (CSP)
+Share Memory by Communicating
+
+Song Gao
+Software Engineering Intern, Cloud Monitoring, Rackspace
+song.gao@rackspace.com
+http://song.gao.io
+
+* What is in CSP?
+Two primitives in CSP:
+
+- Primitive Processes
+- Events
+
+Primitive processes communicate with each other only through events.
+
+
+* Do not communicate by sharing memory, share memory by communicating.
+
+* Why is it good?
+
+- Enabling better concurrency;
+- Less coupling between threads;
+- More readable and concise code
+
+
+* Let's speak Code
+
+* Sequential
+
+.play code/example_seq.go
+
+slowIO() and stupidLoop() cannot be interleaved.
+
+* Busy Wait
+
+.play code/example_busywait.go
+
+* Signalling
+
+.play code/example_signalling.go
+
+* CSP's Style
+
+.play code/example_csp.go
+
+* Libraries?
+
+- Ruby: [[https://github.com/brinkar/crp]]
+- Python: [[https://code.google.com/p/pycsp/]]
+- C++: [[http://www.cs.kent.ac.uk/projects/ofa/c++csp/]]
+- Go: [[http://golang.org/doc/effective_go.html#concurrency]]
+
+* CSP The Theory
+
+- CSP allows the description of systems in terms of component processes that operate independently, and interact with each other solely through message-passing communication
+- C. A. R. Hoare. 1978. Communicating sequential processes. ( [[http://scholar.google.com/scholar?cluster=5542195232825827670&hl=en][link]] )
+- N. Soundararajan. 1983. Correctness proofs of CSP programs. ( [[http://www.sciencedirect.com/science/article/pii/0304397583900452][link]] )
+
+.html html/formal.html
+
+[[http://en.wikipedia.org/wiki/Communicating_sequential_processes#Examples][Concurrent system described in CSP: A guy buys chocolate from a vendor machine]]
+
+* Related Topics
+
+- Functional Programming; Imutability
+
+- MapReduce [[http://ieeexplore.ieee.org/xpl/login.jsp?tp=&arnumber=5457747]]
+
+Languages Influenced by CSP
+
+- Go
+- Erlang
+- Occam
+- Limbo
+
