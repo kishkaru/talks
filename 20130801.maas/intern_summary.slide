@@ -1,0 +1,228 @@
+What did I do?
+
+Song Gao
+Software Engineering Intern, Cloud Monitoring, Rackspace
+song@gao.io
+https://song.gao.io
+
+* Outline
+- Agent System
+- - go-agent-endpoint
+- - virgo/virgo-base division
+- Other Stuff
+- - ele email notification: In-Reply-To
+- - Facetube
+
+
+* Agent System
+
+* Status Quo
+  ele <---> virgo
+        |
+        |
+        +--> bi-directional TCP persistent connection with json; instead of a push/poll model
+        
+* What we want
+   Endpoint Logic <---> Generic Endpoint <---> Agent <---> Custom Lua Bundle
+                                           |
+                                          /
+           ------------------------------
+         /
+        |
+        +--> bi-directional TCP persistent connection with json; instead of a push/poll model
+
+What would users do to build their own agent system?
+
+- write Endpoint Logic and 
+- Custom Lua Bundle to accomplish abitary agent logic.
+
+* (re-)Factoring
+   .
+                    |                                  |
+   Endpoint Logic <-|-> Generic Endpoint <---> Agent <-|-> Custom Lua Bundle
+                    |                                  |
+                    +->where should we draw the line?<-+
+
+
+What should be generic ?
+
+- TLS connection management
+- Bi-directional RPC Requests
+- pluggable RPC message encoding
+- ...
+
+We need simple interfaces that minimize effort for user to implement their own agent system.
+
+* What technologies can be used?
+
+Status quo: agent is written in C & Async Lua; endpoint in ele is written in node.js
+
+It's language independent. Which is cool, and we wanna keep it like that.
+
+* Endpoint Implementation
+Current ele is tightly coupled with monitoring; we need a generic one.
+
+Options:
+
+- refactor our node.js code?
+- Write a python version that interact with OpenStack components
+- Write in Go first and consider other implementation later
+
+Go is chosen because:
+
+- It's performant; and it's cool
+- It demonstrates the agent system is language independent
+- I like Go (i.e. I'm fastest when implementing it in Go)
+- It turns out working pretty good!
+
+
+* How should a specific application interact with the endpoint?
+
+go-agent-endpoint deals with connections, RPC calls, etc. But we need an interface to enable users to implement their logics over the existing protocol.
+
+Options we thought about:
+
+- a RESTful API between go-agent-endpoint and a user implemented process that has user-defined logic;
+- a Unix domain socket between user process and go-agent-endpoint!
+
+But they all introduce another protocol and requires users implement a lot of code.
+
+Or:
+
+- we could make it tight coupled and expect users to write everything in Go
+
+No that's not OK!
+
+* An Apache-like handler model
+.link http://lists.w3.org/Archives/Public/w3c-dist-auth/msg01065.html It's classic! 
+
+When you create an endpoint, you pass in a
+
+  Hub *Hub
+
+, on which you can use a method
+
+  func (h *Hub) Hook(trigger string, handler Handler, priority int)
+
+to register a handler, which has a Handle method:
+
+  type Handler interface {
+      Handle(req *Request, responder *Responder, connContext ConnContext) HandleCode
+  }
+
+that handles a request, and responds with a responder that Hub passes in, and returns a HandleCode, which can be one of
+
+  OK
+  DECLINED
+  FAIL
+
+* An Apache-like handler model (con'd)
+HandleCodes:
+
+- OK: the request is properly handled
+- DECLINED: this request is not done yet, and should be passed onto next handler based on handler priority
+- FAIL: this request is invalid and should be returned with an error
+
+An example of DECLINED:
+
+Multiple authenticators that returns OK if authentication succeed, or DECLINED if it should be passed on the next authenticator. A request is passed on until the request is authenticated or reaching a default one.
+
+
+* Demo
+
+
+* Advantages about Handler Model
+It supports arbitrary decoupling; only the communication logic with the specific application in implemented in Go
+
+Users can use their prefered IPC to interact with other languages, e.g. RESTful communication with Barbican server for cloudkeep
+
+
+* Agent Refactoring
+- kansface did some awesome groundwork in division
+- C code and dependencies are done
+
+But
+
+- All Lua files are still in virgo instead of virgo-base
+- In Lua classes, generic code and monitoring-related logic are coupled together
+
+.link https://f.cloud.github.com/assets/255797/896261/585d9968-fadc-11e2-9c19-2fc967625f95.png diagram
+
+* Blocker in Refactoring Lua in virgo
+- We were recursively scaning all lua files in virgo, and add them into bundle except the ones in exclusion list
+
+We need a fine control over what files are included in the bundle.
+
+Solution: use a bundle.list file to tell the build system what file to include in the bundle
+
+* Another blocker
+Gyp is not working for bundle.list! We have to upgrade it from 2 years ago!
+
+* Blocker in upgrading Gyp
+
+Ridiculous/Awesome bug in gyp on Windows
+
+.link https://gist.github.com/songgao/c2a2511f666714814e8b gist
+
+We suspected it was a Python bug on Windows, and we tried this:
+  def f(a, b, c, *d):
+    pass
+with a huge array passed in for d, but it turns out working well
+
+Solution: don't use gyp to pass large array into Python function
+
+* Refactor classes in Lua
+.link https://f.cloud.github.com/assets/255797/896261/585d9968-fadc-11e2-9c19-2fc967625f95.png before
+.link https://f.cloud.github.com/assets/255797/896263/5e638fde-fadc-11e2-8eeb-f11e1efe118f.png after
+
+* Agent: Not done
+Still needs some work:
+
+- renaming
+- not sure if the division is good; will need to try implementing a hello world example
+
+
+
+* What else did I do?
+
+* ele Email Notification Threading
+
+Why?
+
+- It's a nice feature that email threading works for customers
+- I needed to learn about ele and how to deploy ele :-)
+
+* First Try
+RFC 822:
+Simply "In-Reply-To" --> refere to the email it's replying to
+
+Oops, it's too ancient. It's replaced by RFC 2822, which introduces References field that contains all precedent emails.
+
+* 1.5th try
+Intuitive way: Pushing everything into References;
+
+like this:
+
+  message 1
+    message 2
+      message 3
+        message 4
+
+not sure how large References can be
+
+* Second try
+Only use the latest one as parent; constructing a one-parent thread instead of nested
+
+like this:
+
+  message 1
+    message 2
+    message 3
+    message 4
+
+.link https://github.com/racker/ele/pull/1650 locking problem
+
+* Facetube
+- We tried Facewall, but it's not working :(
+- So we built API
+.link https://github.com/racker/facetube/pull/4 PR
