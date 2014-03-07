@@ -1,0 +1,88 @@
+A Brief Introduction on OpenPGP
+6 Mar 2014
+
+Song Gao
+song@gao.io
+https://song.gao.io/
+
+* What are GPG, PGP, GPGPGPGPGPGPGP....?
+
+- PGP == Pretty Good Privacy; now owned by Symantec Corporation
+- GPG == GNU Privacy Guard, or GnuPG; GPLv3
+- Both PGP and GPG follow OpenGPG standard ([[http://tools.ietf.org/html/rfc4880][RFC 4880]])
+
+* Symmetric vs Asymmetric Encryption
+
+*Symmetric* *Encryption*: Sender and receiver shared the same key (a.k.a. "password")
+
+*Asymmetric* *Encryption*:
+
+- Data encrypted with _Private_ _Key_ can only be decrypted with the _Public_ _Key_
+
+- Data encrypted with _Public_ _Key_ can only be decrypted with the _Private_ _Key_
+
+.image https://developer.apple.com/library/mac/documentation/security/conceptual/security_overview/Art/security_asymmetric.jpg 256 500
+
+GnuPG supports both. The latter one is normally what people use.
+
+* Asymmetric Encryption - Application
+
+1. *Signature*
+
+Encrypt hash of the message with your _Private_ _Key_, and that's the signature for the message. Other people verify it by decrypt the signature with your _Public_ _Key_, compute hash of the message, and compare them.
+
+Provide a way to verify that the message is actually from *YOU*.
+
+Examples: Email signature, Linux software packages, `git` `commit` `-S`
+
+2. *Encryption*
+
+Encrypt the message body with recipient's _Public_ _Key_. The receiver decrypts the message with his/her _Private_ _Key_.
+
+Provide a way to hide the message body from people other than the receiver.
+
+Examples: Secure Emails, *HTTPS
+
+* Some Other Terms in OpenPGP
+
+- Signing Keys
+Produce a signature on another person's public key, indicating that you trust the signed public key belongs the the person.
+
+- Revoke Certificate
+A special signature on your own public produced with your own private key. If it's present, it means the key is lost or compromised, and should not be used any more.
+
+- Key server
+Serves existing public keys and their signatures.
+
+- Key Signing Party
+.link http://en.wikipedia.org/wiki/Key_signing_party
+
+* OK, enough theory...
+
+GnuPG itself:
+
+- Archlinux: [[https://wiki.archlinux.org/index.php/GnuPG]]
+
+- Ubuntu: [[https://help.ubuntu.com/community/GnuPrivacyGuardHowto]]
+
+- Mac OS X: [[https://gpgtools.org/]]
+
+Email clients that support GnuPG:
+
+- Thunderbird (through plugin)
+
+- Mail.app (Mac only, through plugin)
+
+- mutt (commandline)
+
+* Demo!
+
+* Securing Private Key
+
+- Use passphrase for your private key
+
+- Only store it locally
+
+- Generate a Revoke Certificate and store it safely, separate (or redundant) from where you store your private key
+
+- Encrypt your harddrive.
